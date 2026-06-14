@@ -10,22 +10,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem('jobfit_user');
     const token = localStorage.getItem('jobfit_token');
-    if (saved && token) {
-      setUser(JSON.parse(saved));
-    }
+    if (saved && token) setUser(JSON.parse(saved));
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const login = async (username, password) => {
+    const { data } = await api.post('/auth/login', { username, password });
     localStorage.setItem('jobfit_token', data.token);
     localStorage.setItem('jobfit_user', JSON.stringify(data.user));
     setUser(data.user);
     return data;
   };
 
-  const register = async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password });
+  const register = async (name, username, password) => {
+    const { data } = await api.post('/auth/register', { name, username, password });
     localStorage.setItem('jobfit_token', data.token);
     localStorage.setItem('jobfit_user', JSON.stringify(data.user));
     setUser(data.user);

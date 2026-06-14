@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', username: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,10 +14,13 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (form.password.length < 6) return setError('Password must be at least 6 characters');
+    if (form.password !== form.confirm)
+      return setError('Passwords do not match');
+    if (form.password.length < 6)
+      return setError('Password must be at least 6 characters');
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password);
+      await register(form.name, form.username, form.password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -52,16 +55,16 @@ export default function Register() {
             <input
               type="text" name="name" value={form.name} onChange={handle} required
               className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
-              placeholder="Arjun Sharma"
+              placeholder="Venkatesh K"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-400 uppercase tracking-widest">Email</label>
+            <label className="text-xs text-slate-400 uppercase tracking-widest">Username</label>
             <input
-              type="email" name="email" value={form.email} onChange={handle} required
+              type="text" name="username" value={form.username} onChange={handle} required
               className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
-              placeholder="you@example.com"
+              placeholder="venkatesh81"
             />
           </div>
 
@@ -70,7 +73,16 @@ export default function Register() {
             <input
               type="password" name="password" value={form.password} onChange={handle} required
               className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
-              placeholder="Min 6 characters"
+              placeholder="min 6 characters"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400 uppercase tracking-widest">Confirm Password</label>
+            <input
+              type="password" name="confirm" value={form.confirm} onChange={handle} required
+              className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
+              placeholder="repeat password"
             />
           </div>
 

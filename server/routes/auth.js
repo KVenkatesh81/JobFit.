@@ -8,48 +8,44 @@ const signToken = (id) =>
 
 router.post('/register', async (req, res) => {
   try {
-    console.log('Register hit:', req.body);
-    const { name, email, password } = req.body;
-    if (!name || !email || !password)
+    const { name, username, password } = req.body;
+    if (!name || !username || !password)
       return res.status(400).json({ message: 'All fields required' });
+    if (password.length < 6)
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-    const existing = await User.findOne({ email });
-    console.log('Existing check done');
+    const existing = await User.findOne({ username });
     if (existing)
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(400).json({ message: 'Username already taken' });
 
-    const user = await User.create({ name, email, password });
-    console.log('User created:', user._id);
+    const user = await User.create({ name, username, password });
     const token = signToken(user._id);
 
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, username: user.username },
     });
   } catch (err) {
-    console.error('REGISTER ERROR:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login hit:', req.body);
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: 'Email and password required' });
+    const { username, password } = req.body;
+    if (!username || !password)
+      return res.status(400).json({ message: 'Username and password required' });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
     if (!user || !(await user.matchPassword(password)))
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid username or password' });
 
     const token = signToken(user._id);
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, username: user.username },
     });
   } catch (err) {
-    console.error('LOGIN ERROR:', err);
     res.status(500).json({ message: err.message });
   }
 });

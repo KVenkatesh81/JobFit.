@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.username, form.password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -47,11 +47,11 @@ export default function Login() {
           )}
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-400 uppercase tracking-widest">Email</label>
+            <label className="text-xs text-slate-400 uppercase tracking-widest">Username</label>
             <input
-              type="email" name="email" value={form.email} onChange={handle} required
+              type="text" name="username" value={form.username} onChange={handle} required
               className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
-              placeholder="you@example.com"
+              placeholder="your username"
             />
           </div>
 

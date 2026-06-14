@@ -61,7 +61,7 @@ export default function Dashboard() {
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-slate-400 text-sm hidden sm:block">
-              Hey, <span className="text-white font-medium">{user?.name?.split(' ')[0]}</span>
+              Hey, <span className="text-white font-medium">{user?.name}</span>
             </span>
             <button onClick={() => { logout(); navigate('/login'); }}
               className="text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-4 py-1.5 rounded-lg transition-all">

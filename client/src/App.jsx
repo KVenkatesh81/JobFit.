@@ -10,6 +10,11 @@ import InterviewQuestions from './pages/InterviewQuestions';
 import MockInterview from './pages/MockInterview';
 import CoverLetter from './pages/CoverLetter';
 import CompanyMatcher from './pages/CompanyMatcher';
+import Jobs from './pages/Jobs';
+import PostJob from './pages/PostJob';
+import ApplyVerified from './pages/ApplyVerified';
+import Applications from './pages/Applications';
+import Admin from './pages/Admin';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -43,6 +48,11 @@ export default function App() {
           <Route path="/mock-interview" element={<ProtectedRoute><MockInterview /></ProtectedRoute>} />
           <Route path="/cover-letter" element={<ProtectedRoute><CoverLetter /></ProtectedRoute>} />
           <Route path="/company-matcher" element={<ProtectedRoute><CompanyMatcher /></ProtectedRoute>} />
+          <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
+          <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
+          <Route path="/apply-verified" element={<ProtectedRoute><ApplyVerified /></ProtectedRoute>} />
+          <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -132,7 +132,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     {r.atsScore && <span className="text-xs text-indigo-400 font-semibold">ATS: {r.atsScore}</span>}
-                    <a href={r.fileUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-400 text-xs hover:underline">View ↗</a>
+                    <button onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(r.fileUrl)}&embedded=true`, "_blank")} className="text-indigo-400 text-xs hover:underline">View ↗</button>
                   </div>
                 </div>
               ))}

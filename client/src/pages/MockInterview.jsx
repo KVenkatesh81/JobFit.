@@ -7,6 +7,7 @@ export default function MockInterview() {
   const [resumes, setResumes] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [targetRole, setTargetRole] = useState('');
+  const [interviewType, setInterviewType] = useState('Technical');
   const [phase, setPhase] = useState('setup');
   const [questions, setQuestions] = useState([]);
   const [currentQ, setCurrentQ] = useState(0);
@@ -14,7 +15,6 @@ export default function MockInterview() {
   const [transcript, setTranscript] = useState('');
   const [listening, setListening] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [grading, setGrading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(120);
@@ -40,25 +40,40 @@ export default function MockInterview() {
 
   const startInterview = async () => {
     if (!selectedId) return setError('Please select a resume');
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
-      const { data } = await api.post('/ai/interview-questions', {
-        resumeId: selectedId,
-        targetRole: targetRole || 'Software Engineer',
-        difficulty: 'Medium',
-      });
-      const qs = data.result.questions.slice(0, 5);
+      let qs = [];
+      if (interviewType === 'HR') {
+        const { data } = await api.post('/ai/hr-questions', {
+          resumeId: selectedId,
+          targetRole: targetRole || 'Software Engineer',
+        });
+        qs = data.result.questions.slice(0, 5).map(q => ({
+          ...q,
+          category: 'HR',
+          difficulty: 'Medium',
+          question: q.question,
+          ideal_answer: q.sample_answer,
+        }));
+      } else {
+        const { data } = await api.post('/ai/interview-questions', {
+          resumeId: selectedId,
+          targetRole: targetRole || 'Software Engineer',
+          difficulty: 'Medium',
+        });
+        // Filter only Technical + DSA questions for technical round
+        qs = data.result.questions
+          .filter(q => ['Technical', 'DSA', 'System Design'].includes(q.category))
+          .slice(0, 5);
+      }
       setQuestions(qs);
       setAnswers(new Array(qs.length).fill(''));
       setCurrentQ(0);
       setPhase('interview');
-      setTimeLeft(120);
+      setTimeLeft(interviewType === 'HR' ? 180 : 120);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to start interview');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const startListening = () => {
@@ -98,7 +113,7 @@ export default function MockInterview() {
     updated[currentQ] = transcript;
     setAnswers(updated);
     setTranscript('');
-    setTimeLeft(120);
+    setTimeLeft(interviewType === 'HR' ? 180 : 120);
     if (currentQ < questions.length - 1) {
       setCurrentQ(q => q + 1);
     } else {
@@ -108,7 +123,6 @@ export default function MockInterview() {
 
   const gradeInterview = async (finalAnswers) => {
     setPhase('grading');
-    setGrading(true);
     try {
       const qa = questions.map((q, i) => ({
         question: q.question,
@@ -117,31 +131,32 @@ export default function MockInterview() {
         answer: finalAnswers[i] || '(No answer provided)',
       }));
 
-      const prompt = `You are a strict but fair technical interviewer grading a mock interview.
+      const prompt = `You are a strict interviewer grading a ${interviewType} mock interview. The questions were based ONLY on the candidate's resume.
 
-Interview Q&A:
+Interview Type: ${interviewType}
+Q&A:
 ${qa.map((q, i) => `Q${i + 1} [${q.category}]: ${q.question}
 Ideal Answer: ${q.ideal}
 Candidate Answer: ${q.answer}`).join('\n\n')}
 
-Grade each answer and provide overall feedback. Return ONLY valid JSON:
+Grade strictly and return ONLY valid JSON:
 {
-  "overall_score": <number 0-100>,
+  "overall_score": <0-100>,
   "overall_grade": "<A/B/C/D/F>",
-  "summary": "<2-3 sentence overall assessment>",
+  "summary": "<honest 2-3 sentence assessment>",
   "strengths": ["<strength1>", "<strength2>"],
-  "improvements": ["<improvement1>", "<improvement2>"],
+  "improvements": ["<improvement1>", "<improvement2>", "<improvement3>"],
   "answers": [
     {
       "question": "<question>",
       "score": <0-10>,
       "feedback": "<specific feedback>",
       "what_was_good": "<what they did well>",
-      "what_to_improve": "<what to improve>"
+      "what_to_improve": "<specific improvement>"
     }
   ]
 }
-Return ONLY the JSON, no explanation, no markdown.`;
+Return ONLY the JSON.`;
 
       const { data } = await api.post('/ai/grade-interview', { prompt });
       setReport(data.report);
@@ -149,8 +164,6 @@ Return ONLY the JSON, no explanation, no markdown.`;
     } catch (err) {
       setError('Grading failed: ' + (err.response?.data?.message || err.message));
       setPhase('interview');
-    } finally {
-      setGrading(false);
     }
   };
 
@@ -172,14 +185,32 @@ Return ONLY the JSON, no explanation, no markdown.`;
 
       <div className="max-w-4xl mx-auto px-6 py-10">
         <h2 className="font-display text-3xl font-bold text-white mb-2">Mock Interview</h2>
-        <p className="text-slate-400 mb-8">Practice with AI — voice-based interview with real grading</p>
+        <p className="text-slate-400 mb-8">Questions based strictly on your resume · Voice-based · AI graded</p>
 
         {/* Setup Phase */}
         {phase === 'setup' && (
           <div className="bg-[#17171f] border border-white/5 rounded-2xl p-8 space-y-5">
-            <div className="text-center mb-6">
+            <div className="text-center mb-2">
               <div className="text-6xl mb-3">🎤</div>
-              <p className="text-slate-400 text-sm">5 questions · 2 minutes each · AI graded</p>
+              <p className="text-slate-400 text-sm">5 questions · AI graded · Based only on your resume</p>
+            </div>
+
+            {/* Interview Type */}
+            <div className="space-y-2">
+              <label className="text-xs text-slate-400 uppercase tracking-widest">Interview Type</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { type: 'Technical', icon: '💻', desc: 'DSA + Tech stack from your resume' },
+                  { type: 'HR', icon: '🤝', desc: 'Behavioral + HR questions' },
+                ].map(t => (
+                  <button key={t.type} onClick={() => setInterviewType(t.type)}
+                    className={`p-4 rounded-xl border text-left transition-all ${interviewType === t.type ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 bg-[#0f0f13] hover:border-white/20'}`}>
+                    <div className="text-2xl mb-1">{t.icon}</div>
+                    <div className="text-white text-sm font-medium">{t.type} Round</div>
+                    <div className="text-slate-500 text-xs">{t.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -198,14 +229,25 @@ Return ONLY the JSON, no explanation, no markdown.`;
               </div>
             </div>
 
-            <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-4">
-              <p className="text-indigo-300 text-sm font-medium mb-2">📋 How it works</p>
-              <ul className="text-slate-400 text-xs space-y-1">
-                <li>→ 5 AI-generated questions based on your resume</li>
-                <li>→ Click the mic button and speak your answer (or type)</li>
-                <li>→ 2 minutes per question</li>
-                <li>→ AI grades each answer and gives detailed feedback</li>
-              </ul>
+            <div className={`rounded-xl p-4 border text-sm ${interviewType === 'Technical' ? 'bg-blue-500/5 border-blue-500/10' : 'bg-purple-500/5 border-purple-500/10'}`}>
+              <p className={`font-medium mb-2 ${interviewType === 'Technical' ? 'text-blue-300' : 'text-purple-300'}`}>
+                {interviewType === 'Technical' ? '💻 Technical Round Info' : '🤝 HR Round Info'}
+              </p>
+              {interviewType === 'Technical' ? (
+                <ul className="text-slate-400 text-xs space-y-1">
+                  <li>→ Questions based ONLY on your resume projects and tech stack</li>
+                  <li>→ DSA questions based on your competitive programming background</li>
+                  <li>→ 2 minutes per question</li>
+                  <li>→ Strict grading — no partial credit</li>
+                </ul>
+              ) : (
+                <ul className="text-slate-400 text-xs space-y-1">
+                  <li>→ HR questions personalized to your resume and background</li>
+                  <li>→ Tests communication, attitude, and cultural fit</li>
+                  <li>→ 3 minutes per question</li>
+                  <li>→ Use STAR method for behavioral questions</li>
+                </ul>
+              )}
             </div>
 
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl">{error}</div>}
@@ -215,9 +257,9 @@ Return ONLY the JSON, no explanation, no markdown.`;
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-                  Preparing questions...
+                  Preparing questions from your resume...
                 </span>
-              ) : '🎤 Start Mock Interview'}
+              ) : `🎤 Start ${interviewType} Round`}
             </button>
           </div>
         )}
@@ -225,54 +267,46 @@ Return ONLY the JSON, no explanation, no markdown.`;
         {/* Interview Phase */}
         {phase === 'interview' && questions.length > 0 && (
           <div className="space-y-4">
-            {/* Progress */}
             <div className="flex items-center justify-between mb-2">
               <span className="text-slate-400 text-sm">Question {currentQ + 1} of {questions.length}</span>
               <span className={`font-display text-lg font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-indigo-400'}`}>
                 ⏱ {formatTime(timeLeft)}
               </span>
             </div>
-            <div className="h-1 bg-white/5 rounded-full overflow-hidden mb-6">
+            <div className="h-1 bg-white/5 rounded-full overflow-hidden mb-4">
               <div className="h-full bg-indigo-500 transition-all duration-300"
-                style={{ width: `${((currentQ) / questions.length) * 100}%` }} />
+                style={{ width: `${(currentQ / questions.length) * 100}%` }} />
             </div>
 
-            {/* Question Card */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
                   {questions[currentQ].category}
                 </span>
                 <span className="text-xs text-slate-500">{questions[currentQ].difficulty}</span>
+                {questions[currentQ].resume_reference && (
+                  <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
+                    From: {questions[currentQ].resume_reference}
+                  </span>
+                )}
               </div>
               <p className="text-white text-lg font-medium leading-relaxed">
                 {questions[currentQ].question}
               </p>
             </div>
 
-            {/* Answer Area */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-slate-400 text-sm">Your answer</p>
-                <button
-                  onClick={listening ? stopListening : startListening}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    listening
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
-                      : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
-                  }`}
-                >
+                <button onClick={listening ? stopListening : startListening}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${listening ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'}`}>
                   {listening ? '⏹ Stop Recording' : '🎤 Start Speaking'}
                 </button>
               </div>
 
-              <textarea
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                rows={5}
-                placeholder="Your spoken answer will appear here, or type your answer..."
-                className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 resize-none placeholder-slate-600"
-              />
+              <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={5}
+                placeholder="Your spoken answer appears here, or type directly..."
+                className="w-full bg-[#0f0f13] border border-white/8 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 resize-none placeholder-slate-600" />
 
               {listening && (
                 <div className="flex items-center gap-2 text-red-400 text-xs">
@@ -293,15 +327,14 @@ Return ONLY the JSON, no explanation, no markdown.`;
         {phase === 'grading' && (
           <div className="bg-[#17171f] border border-white/5 rounded-2xl p-12 text-center">
             <div className="animate-spin w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-400 rounded-full mx-auto mb-6" />
-            <h3 className="font-display text-white text-xl font-semibold mb-2">Grading your interview...</h3>
-            <p className="text-slate-400 text-sm">AI is analyzing each of your answers</p>
+            <h3 className="font-display text-white text-xl font-semibold mb-2">Grading your answers...</h3>
+            <p className="text-slate-400 text-sm">AI is analyzing each response carefully</p>
           </div>
         )}
 
         {/* Report Phase */}
         {phase === 'report' && report && (
           <div className="space-y-4">
-            {/* Score Banner */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
               <div className="text-center">
                 <div className={`font-display text-7xl font-bold ${report.overall_score >= 80 ? 'text-green-400' : report.overall_score >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
@@ -310,14 +343,11 @@ Return ONLY the JSON, no explanation, no markdown.`;
                 <div className="text-slate-400 text-sm">out of 100</div>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-display text-white text-2xl font-bold">Grade {report.overall_grade}</span>
-                </div>
-                <p className="text-slate-300 text-sm leading-relaxed">{report.summary}</p>
+                <span className="font-display text-white text-2xl font-bold">Grade {report.overall_grade}</span>
+                <p className="text-slate-300 text-sm leading-relaxed mt-2">{report.summary}</p>
               </div>
             </div>
 
-            {/* Strengths & Improvements */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-3">💪 Strengths</h3>
@@ -341,7 +371,6 @@ Return ONLY the JSON, no explanation, no markdown.`;
               </div>
             </div>
 
-            {/* Per-Answer Breakdown */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6">
               <h3 className="font-display text-white font-semibold mb-4">📋 Answer Breakdown</h3>
               <div className="space-y-4">

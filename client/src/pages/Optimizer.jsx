@@ -13,6 +13,7 @@ export default function Optimizer() {
   const [resumes, setResumes] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [jd, setJd] = useState('');
+  const [targetRole, setTargetRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');

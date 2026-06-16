@@ -23,7 +23,7 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, username: user.username },
+      user: { id: user._id, name: user.name, username: user.username, role: user.role },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -40,10 +40,13 @@ router.post('/login', async (req, res) => {
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ message: 'Invalid username or password' });
 
+    if (user.banned)
+      return res.status(403).json({ message: 'Your account has been banned' });
+
     const token = signToken(user._id);
     res.json({
       token,
-      user: { id: user._id, name: user.name, username: user.username },
+      user: { id: user._id, name: user.name, username: user.username, role: user.role },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -51,7 +54,15 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/me', require('../middleware/auth'), (req, res) => {
-  res.json({ user: req.user });
+  res.json({
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      username: req.user.username,
+      role: req.user.role,
+      banned: req.user.banned,
+    }
+  });
 });
 
 module.exports = router;

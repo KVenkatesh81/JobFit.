@@ -10,7 +10,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem('jobfit_user');
     const token = localStorage.getItem('jobfit_token');
-    if (saved && token) setUser(JSON.parse(saved));
+    if (saved && token) {
+      setUser(JSON.parse(saved));
+      // Always fetch fresh user data from server
+      api.get('/auth/me').then(({ data }) => {
+        setUser(data.user);
+        localStorage.setItem('jobfit_user', JSON.stringify(data.user));
+      }).catch(() => {});
+    }
     setLoading(false);
   }, []);
 

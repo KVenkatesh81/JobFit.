@@ -58,6 +58,15 @@ router.post('/full-report', auth, async (req, res) => {
         a.priority_fixes.forEach((f, i) => doc.fontSize(11).fillColor('#333').text((i + 1) + '. ' + f));
         doc.moveDown(1);
       }
+
+      if (a.writeup && a.writeup.length) {
+        doc.fontSize(14).fillColor('#4f46e5').text('Detailed Write-up', { underline: true });
+        a.writeup.forEach(point => {
+          doc.fontSize(11).fillColor('#333').text('- ' + point, { width: 500 });
+          doc.moveDown(0.3);
+        });
+        doc.moveDown(1);
+      }
     } else {
       doc.fontSize(12).fillColor('#666').text('No analysis data available. Run ATS Score first.');
     }

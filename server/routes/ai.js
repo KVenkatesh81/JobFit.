@@ -21,7 +21,7 @@ router.post('/ats-score', auth, async (req, res) => {
     const dsaContext = getDSAContext(targetRole);
     const jdSection = jobDescription ? `Job Description:\n${jobDescription}\n\n` : '';
 
-    const prompt = `You are a STRICT ATS analyzer and resume expert. Be harsh and honest — do NOT give inflated scores. Go through the resume line by line. Flag EVERY genuine spelling mistake, EVERY spacing inconsistency (double spaces, missing spaces around punctuation, inconsistent spacing between sections or bullets), and EVERY formatting inconsistency. For each issue, you MUST specify exactly which section and which line/bullet it occurs in — vague answers are not acceptable. IMPORTANT: If you see multiple real words merged together with no space (e.g. "IndianInstituteofTechnology" or "BachelorofTechnology"), this is a PDF text-extraction artifact, NOT a spelling mistake — do not list these as spelling mistakes. Only flag actual misspelled words (wrong letters), not missing spaces between otherwise correctly-spelled words.
+    const prompt = `You are a STRICT ATS analyzer and resume expert. Be harsh and honest — do NOT give inflated scores. Go through the resume line by line. CRITICAL: Before claiming any section is missing, weak, or irrelevant, verify it against the actual text provided — if Projects, Skills, or any section clearly exists in the text, do not claim otherwise. Base every observation strictly on the literal text given, not assumptions. Flag EVERY genuine spelling mistake, EVERY spacing inconsistency (double spaces, missing spaces around punctuation, inconsistent spacing between sections or bullets), and EVERY formatting inconsistency. For each issue, you MUST specify exactly which section and which line/bullet it occurs in — vague answers are not acceptable. IMPORTANT: If you see multiple real words merged together with no space (e.g. "IndianInstituteofTechnology" or "BachelorofTechnology"), this is a PDF text-extraction artifact, NOT a spelling mistake — do not list these as spelling mistakes. Only flag actual misspelled words (wrong letters), not missing spaces between otherwise correctly-spelled words.
 
 ${jdSection}Target Role: ${targetRole || 'Software Engineer'}
 DSA/CP Relevance: ${dsaContext.instruction}
@@ -58,9 +58,12 @@ Analyze STRICTLY and return ONLY valid JSON:
     "projects": true
     ${dsaContext.needed ? `, "dsa_cp": true` : ''}
   },
-  "priority_fixes": ["<fix1>", "<fix2>", "<fix3>"]
+  "priority_fixes": ["<fix1>", "<fix2>", "<fix3>"],
+  "writeup": [
+    "<one clear plain-English bullet point describing a specific mistake or fix, written the way a human reviewer would explain it to the candidate directly, mention exact section/line where relevant>"
+  ]
 }
-Return ONLY the JSON.`;
+Generate at least 8-12 writeup bullets covering every spelling mistake, spacing issue, formatting issue, and key suggestion found, written in clear plain English as if explaining directly to the candidate. Return ONLY the JSON.`;
 
     const raw = await askGroq(prompt);
     const clean = raw.replace(/```json|```/g, '').trim();
@@ -94,10 +97,12 @@ router.post('/optimize', auth, async (req, res) => {
 
     const prompt = `You are a strict resume coach helping a candidate land interviews.
 
+CRITICAL RULE: Base every single observation strictly on the EXACT text provided below. Before writing any "issue" for a section, you MUST first locate and quote the actual current_content from that section in the resume text. If the section already does what a generic checklist would suggest (e.g. skills are already categorized with labels like "Frontend:", "Backend:", "Database:" or coursework already lists software-engineering-relevant courses), then either skip critiquing that section entirely or give a more nuanced, specific critique — do NOT repeat generic templated advice like "categorize your skills" if they are visibly already categorized in the text. Read the actual resume text fully before generating each suggestion.
+
 ${jdSection}Target Role: ${targetRole || 'Software Engineer'}
 DSA/CP Relevance: ${dsaContext.instruction}
 
-Resume Text:
+Resume Text (this is the COMPLETE and ONLY source of truth — read it fully before responding):
 ${resume.extractedText.slice(0, 4000)}
 
 Return ONLY valid JSON:
@@ -107,7 +112,7 @@ Return ONLY valid JSON:
     { "wrong": "<wrong>", "correct": "<correct>", "context": "<where it appears>" }
   ],
   "suggestions": [
-    { "section": "<section name>", "issue": "<specific issue>", "fix": "<exact actionable fix>", "priority": "<high/medium/low>" }
+    { "section": "<section name>", "current_content": "<quote the actual relevant text from that section as it appears in the resume>", "issue": "<specific issue based on what is actually there>", "fix": "<exact actionable fix>", "priority": "<high/medium/low>" }
   ],
   "bullet_rewrites": [
     { "original": "<original bullet>", "improved": "<improved with metrics and strong action verbs>", "why": "<why this is better>" }
@@ -122,9 +127,12 @@ Return ONLY valid JSON:
   },` : `"dsa_cp_recommendations": null,`}
   "keywords_to_add": ["<keyword1>", "<keyword2>", "<keyword3>"],
   "format_tips": ["<tip1>", "<tip2>", "<tip3>"],
-  "ats_score_after_fixes": 75
+  "ats_score_after_fixes": 75,
+  "writeup": [
+    "<one clear plain-English bullet point describing a specific optimization suggestion, written the way a human reviewer would explain it directly to the candidate>"
+  ]
 }
-Return ONLY the JSON.`;
+Generate at least 8-12 writeup bullets covering every suggestion, bullet rewrite, bold recommendation, and keyword gap, written in clear plain English. Return ONLY the JSON.`;
 
     const raw = await askGroq(prompt, 3000);
     const clean = raw.replace(/```json|```/g, '').trim();

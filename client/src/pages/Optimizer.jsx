@@ -109,6 +109,20 @@ export default function Optimizer() {
         {result && (
           <div className="space-y-4">
             {/* Overall tip */}
+            {result.writeup?.length > 0 && (
+              <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6">
+                <h3 className="font-display text-white font-semibold mb-4">📝 Detailed Write-up</h3>
+                <ul className="space-y-3">
+                  {result.writeup.map((point, i) => (
+                    <li key={i} className="text-sm text-slate-300 flex gap-3 leading-relaxed">
+                      <span className="text-indigo-400 font-bold flex-shrink-0">•</span>
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5">
               <p className="text-xs text-indigo-400 uppercase tracking-widest mb-1">💡 Top Tip</p>
               <p className="text-white text-sm leading-relaxed">{result.overall_tip}</p>

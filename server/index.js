@@ -27,16 +27,17 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/verify', require('./routes/verify'));
+app.use('/api/export', require('./routes/export'));
 
-app.get('/', (req, res) => res.json({ message: 'JobFit.ai API running ✅' }));
+app.get('/', (req, res) => res.json({ message: 'JobFit.ai API running' }));
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ MongoDB connected');
+    console.log('MongoDB connected');
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, () => console.log('Server running on port ' + PORT));
   })
   .catch((err) => {
-    console.error('❌ MongoDB error:', err.message);
+    console.error('MongoDB error:', err.message);
     process.exit(1);
   });

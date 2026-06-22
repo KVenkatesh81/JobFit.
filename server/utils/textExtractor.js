@@ -1,6 +1,7 @@
 const https = require('https');
 const http = require('http');
 const mammoth = require('mammoth');
+const pdfParse = require('pdf-parse');
 
 function downloadBuffer(url) {
   return new Promise((resolve, reject) => {
@@ -8,6 +9,9 @@ function downloadBuffer(url) {
     const request = client.get(url, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
         return downloadBuffer(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode === 401) {
+        return reject(new Error('HTTP 401 - Unauthorized'));
       }
       if (res.statusCode !== 200) {
         return reject(new Error(`HTTP ${res.statusCode}`));
@@ -23,12 +27,20 @@ function downloadBuffer(url) {
 
 async function extractText(fileUrl, fileType) {
   try {
-    console.log('Downloading:', fileUrl);
-    const buffer = await downloadBuffer(fileUrl);
+    // Convert Cloudinary URL to use fl_attachment for direct access
+    let downloadUrl = fileUrl;
+    if (fileUrl.includes('cloudinary.com')) {
+      // For image type PDFs, add fl_attachment flag
+      downloadUrl = fileUrl
+        .replace('/image/upload/', '/image/upload/fl_attachment/')
+        .replace('/raw/upload/', '/raw/upload/fl_attachment/');
+    }
+
+    console.log('Downloading from:', downloadUrl);
+    const buffer = await downloadBuffer(downloadUrl);
     console.log('Buffer size:', buffer.length);
 
     if (fileType === 'pdf') {
-      const pdfParse = require('pdf-parse');
       const data = await pdfParse(buffer);
       console.log('Text length:', data.text?.length);
       return data.text || '';

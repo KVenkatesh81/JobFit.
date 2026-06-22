@@ -15,6 +15,8 @@ import PostJob from './pages/PostJob';
 import ApplyVerified from './pages/ApplyVerified';
 import Applications from './pages/Applications';
 import Admin from './pages/Admin';
+import HRBank from './pages/HRBank';
+import TechBank from './pages/TechBank';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -53,6 +55,8 @@ export default function App() {
           <Route path="/apply-verified" element={<ProtectedRoute><ApplyVerified /></ProtectedRoute>} />
           <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/hr-bank" element={<ProtectedRoute><HRBank /></ProtectedRoute>} />
+          <Route path="/tech-bank" element={<ProtectedRoute><TechBank /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -26,6 +26,8 @@ export default function Dashboard() {
     { id: 7, icon: '🏢', label: 'Company Matcher', desc: 'Find companies + career paths that fit you', route: '/company-matcher' },
     { id: 8, icon: '💼', label: 'Job Board', desc: 'Browse jobs matched to your profile', route: '/jobs' },
     { id: 9, icon: '📋', label: 'Application Tracker', desc: 'Track all your job applications', route: '/applications' },
+    { id: 10, icon: '❓', label: 'HR Question Bank', desc: '50+ personalized HR questions', route: '/hr-bank' },
+    { id: 11, icon: '💻', label: 'Technical Question Bank', desc: '50 questions from your projects + prep tips', route: '/tech-bank' },
   ];
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Dashboard() {
     const file = e.target.files[0];
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf', 'docx'].includes(ext)) return setUploadError('Only PDF and DOCX files are allowed');
+    if (!['pdf', 'docx'].includes(ext)) { setUploadError('Only PDF and DOCX files are allowed'); return; }
     setUploading(true); setUploadMsg(''); setUploadError('');
     const formData = new FormData();
     formData.append('resume', file);
@@ -65,6 +67,14 @@ export default function Dashboard() {
       setUploading(false);
       fileRef.current.value = '';
     }
+  };
+
+  const deleteResume = async (id) => {
+    if (!window.confirm('Delete this resume?')) return;
+    try {
+      await api.delete(`/resume/${id}`);
+      fetchResumes();
+    } catch (err) { console.error(err); }
   };
 
   const isPending = verifyStatus?.request?.status === 'pending';
@@ -97,7 +107,6 @@ export default function Dashboard() {
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Resume Upload Card */}
         <div className="bg-[#17171f] border border-white/5 rounded-2xl p-8 mb-10">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div>
@@ -108,7 +117,9 @@ export default function Dashboard() {
               <input type="file" ref={fileRef} onChange={handleUpload} accept=".pdf,.docx" className="hidden" id="resume-input" />
               <label htmlFor="resume-input"
                 className={`cursor-pointer inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${uploading ? 'bg-indigo-700 opacity-60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}>
-                {uploading ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />Uploading...</> : '📄 Upload Resume (PDF / DOCX)'}
+                {uploading
+                  ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />Uploading...</>
+                  : '📄 Upload Resume (PDF / DOCX)'}
               </label>
               {uploadMsg && <p className="text-green-400 text-xs">{uploadMsg}</p>}
               {uploadError && <p className="text-red-400 text-xs">{uploadError}</p>}
@@ -131,8 +142,19 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {r.atsScore && <span className="text-xs text-indigo-400 font-semibold">ATS: {r.atsScore}</span>}
-                    <button onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(r.fileUrl)}&embedded=true`, "_blank")} className="text-indigo-400 text-xs hover:underline">View ↗</button>
+                    {r.atsScore && (
+                      <span className="text-xs text-indigo-400 font-semibold">ATS: {r.atsScore}</span>
+                    )}
+                    <button
+                      onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(r.fileUrl)}`, '_blank')}
+                      className="text-indigo-400 text-xs hover:text-indigo-300 transition-all">
+                      View ↗
+                    </button>
+                    <button
+                      onClick={() => deleteResume(r._id)}
+                      className="text-red-400 text-xs hover:text-red-300 border border-red-500/20 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-all">
+                      🗑 Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -143,7 +165,6 @@ export default function Dashboard() {
         <h3 className="font-display text-lg font-semibold text-white mb-5">
           All Features <span className="text-slate-500 font-normal text-sm ml-2">— click to use</span>
         </h3>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map((f) => (
             <div key={f.id}
@@ -158,16 +179,13 @@ export default function Dashboard() {
             </div>
           ))}
 
-          {/* Post Job Card — always visible, blurred if not verified */}
           <div className="relative bg-[#17171f] border border-white/5 rounded-xl p-5 overflow-hidden">
-            {/* Blurred content shown to all */}
             <div className={`${!isVerified ? 'blur-sm pointer-events-none select-none' : ''}`}>
               <div className="text-3xl mb-3">📢</div>
               <h4 className="font-display text-white font-semibold text-sm mb-1">Post a Job</h4>
               <p className="text-slate-500 text-xs leading-relaxed">Share job opportunities with the community</p>
             </div>
 
-            {/* Overlay for non-verified users */}
             {!isVerified && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f0f13]/80 rounded-xl px-4 text-center">
                 {isPending ? (
@@ -180,8 +198,7 @@ export default function Dashboard() {
                   <>
                     <div className="text-2xl mb-2">❌</div>
                     <p className="text-red-400 text-xs font-semibold mb-2">Request Rejected</p>
-                    <button
-                      onClick={() => navigate('/apply-verified')}
+                    <button onClick={() => navigate('/apply-verified')}
                       className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition-all">
                       Apply Again
                     </button>
@@ -191,8 +208,7 @@ export default function Dashboard() {
                     <div className="text-2xl mb-2">🔒</div>
                     <p className="text-white text-xs font-semibold mb-1">Verified Users Only</p>
                     <p className="text-slate-500 text-xs mb-3">Get verified to post jobs</p>
-                    <button
-                      onClick={() => navigate('/apply-verified')}
+                    <button onClick={() => navigate('/apply-verified')}
                       className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition-all">
                       Get Verified →
                     </button>
@@ -201,12 +217,9 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Verified users can click */}
             {isVerified && (
-              <div
-                onClick={() => navigate('/post-job')}
-                className="absolute inset-0 cursor-pointer rounded-xl hover:bg-indigo-500/5 transition-all"
-              />
+              <div onClick={() => navigate('/post-job')}
+                className="absolute inset-0 cursor-pointer rounded-xl hover:bg-indigo-500/5 transition-all" />
             )}
 
             {isVerified && (

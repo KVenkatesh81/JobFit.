@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const gradeColor = {
@@ -19,11 +18,12 @@ export default function ATSScore() {
   const navigate = useNavigate();
   const [resumes, setResumes] = useState([]);
   const [selectedId, setSelectedId] = useState('');
-  const [jd, setJd] = useState('');
   const [targetRole, setTargetRole] = useState('');
+  const [jd, setJd] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     api.get('/resume/my').then(({ data }) => {
@@ -33,7 +33,7 @@ export default function ATSScore() {
   }, []);
 
   const analyze = async () => {
-    if (!selectedId) return setError('Please upload a resume first');
+    if (!selectedId) { setError('Please upload a resume first'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
       const { data } = await api.post('/ai/ats-score', { resumeId: selectedId, jobDescription: jd, targetRole });
@@ -41,6 +41,24 @@ export default function ATSScore() {
     } catch (err) {
       setError(err.response?.data?.message || 'Analysis failed');
     } finally { setLoading(false); }
+  };
+
+  const downloadReport = async () => {
+    setDownloading(true);
+    try {
+      const res = await api.post('/export/full-report', { resumeId: selectedId }, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'JobFit_Report.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError('Failed to download report');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -59,7 +77,7 @@ export default function ATSScore() {
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         <h2 className="font-display text-3xl font-bold text-white mb-2">ATS Score Analyzer</h2>
-        <p className="text-slate-400 mb-8">Strict analysis — spelling, formatting, DSA presence, and keyword gaps</p>
+        <p className="text-slate-400 mb-8">Strict analysis — spelling, formatting, and keyword gaps</p>
 
         <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6 mb-6 space-y-4">
           <div className="space-y-1">
@@ -102,7 +120,6 @@ export default function ATSScore() {
 
         {result && (
           <div className="space-y-4">
-            {/* Score Banner */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
               <div className="text-center">
                 <div className={`font-display text-7xl font-bold ${scoreColor(result.score)}`}>{result.score}</div>
@@ -119,7 +136,6 @@ export default function ATSScore() {
               </div>
             </div>
 
-            {/* Priority Fixes */}
             {result.priority_fixes?.length > 0 && (
               <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-3">🚨 Fix These First</h3>
@@ -133,8 +149,7 @@ export default function ATSScore() {
               </div>
             )}
 
-            {/* Spelling Mistakes */}
-            {result.spelling_mistakes?.length > 0 && (
+            {result.spelling_mistakes?.length > 0 ? (
               <div className="bg-[#17171f] border border-red-500/20 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-3">❌ Spelling Mistakes Found</h3>
                 <div className="space-y-2">
@@ -145,20 +160,32 @@ export default function ATSScore() {
                         <span className="text-slate-500">→</span>
                         <span className="text-green-400 text-sm font-medium">{s.correct}</span>
                       </div>
+                      {s.section && <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full inline-block mb-1">{s.section}</span>}
                       <p className="text-slate-500 text-xs">{s.context}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-4">
+                <p className="text-green-400 text-sm">✅ No spelling mistakes found!</p>
+              </div>
+            )}
+
+            {result.spacing_issues?.length > 0 && (
+              <div className="bg-[#17171f] border border-yellow-500/20 rounded-2xl p-5">
+                <h3 className="font-display text-white font-semibold mb-3">📏 Spacing Issues</h3>
+                <div className="space-y-2">
+                  {result.spacing_issues.map((s, i) => (
+                    <div key={i} className="bg-[#0f0f13] rounded-xl p-3 border border-white/5">
+                      <p className="text-yellow-300 text-sm mb-1">{s.issue}</p>
+                      <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full inline-block">{s.location}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {result.spelling_mistakes?.length === 0 && (
-              <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-4">
-                <p className="text-green-400 text-sm">✅ No spelling mistakes found!</p>
-              </div>
-            )}
-
-            {/* DSA/CP Feedback — only for relevant roles */}
             {result.dsa_relevant && result.dsa_cp_feedback && (
               <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-2">💻 DSA & Competitive Programming</h3>
@@ -171,35 +198,32 @@ export default function ATSScore() {
               </div>
             )}
 
-            {/* Formatting Issues */}
             {result.formatting_issues?.length > 0 && (
               <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-3">📐 Formatting Issues</h3>
-                <ul className="space-y-2">
+                <div className="space-y-2">
                   {result.formatting_issues.map((f, i) => (
-                    <li key={i} className="text-sm text-slate-300 flex gap-2">
-                      <span className="text-yellow-400 mt-0.5">⚠</span>{f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* What to Bold */}
-            {result.what_to_make_bold?.length > 0 && (
-              <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
-                <h3 className="font-display text-white font-semibold mb-3">**B** What to Make Bold</h3>
-                <div className="flex flex-wrap gap-2">
-                  {result.what_to_make_bold.map((b, i) => (
-                    <span key={i} className="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
-                      {b}
-                    </span>
+                    <div key={i} className="bg-[#0f0f13] rounded-xl p-3 border border-white/5">
+                      <p className="text-sm text-slate-300 mb-1">{f.issue || f}</p>
+                      {f.location && <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full inline-block mb-1">{f.location}</span>}
+                      {f.fix && <p className="text-green-400 text-xs">Fix: {f.fix}</p>}
+                    </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Sections Check */}
+            {result.what_to_make_bold?.length > 0 && (
+              <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
+                <h3 className="font-display text-white font-semibold mb-3">B What to Make Bold</h3>
+                <div className="flex flex-wrap gap-2">
+                  {result.what_to_make_bold.map((b, i) => (
+                    <span key={i} className="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">{b}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
               <h3 className="font-display text-white font-semibold mb-4">Resume Sections</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -212,7 +236,6 @@ export default function ATSScore() {
               </div>
             </div>
 
-            {/* Strengths & Weaknesses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
                 <h3 className="font-display text-white font-semibold mb-3">💪 Strengths</h3>
@@ -236,7 +259,6 @@ export default function ATSScore() {
               </div>
             </div>
 
-            {/* Keywords */}
             <div className="bg-[#17171f] border border-white/5 rounded-2xl p-5">
               <h3 className="font-display text-white font-semibold mb-4">🔑 Keywords</h3>
               <div className="mb-3">
@@ -257,10 +279,16 @@ export default function ATSScore() {
               </div>
             </div>
 
-            <button onClick={() => navigate('/optimize')}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors font-display">
-              ✍️ Now Optimize My Resume →
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button onClick={downloadReport} disabled={downloading}
+                className="bg-[#17171f] hover:bg-[#1e1e2e] border border-white/10 text-white font-semibold py-3 rounded-xl transition-colors font-display disabled:opacity-50">
+                {downloading ? 'Preparing PDF...' : '📥 Download PDF Report'}
+              </button>
+              <button onClick={() => navigate('/optimize')}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors font-display">
+                ✍️ Optimize My Resume →
+              </button>
+            </div>
           </div>
         )}
       </div>

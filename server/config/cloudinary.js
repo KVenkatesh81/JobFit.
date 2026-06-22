@@ -10,14 +10,10 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
-    const isPDF = file.mimetype === 'application/pdf';
-    return {
-      folder: 'jobfit_resumes',
-      resource_type: isPDF ? 'image' : 'raw',
-      format: isPDF ? 'pdf' : undefined,
-      allowed_formats: ['pdf', 'docx'],
-    };
+  params: {
+    folder: 'jobfit_resumes',
+    resource_type: 'raw',
+    allowed_formats: ['pdf', 'docx'],
   },
 });
 

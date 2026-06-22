@@ -59,3 +59,15 @@ router.get('/view/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// DELETE /api/resume/:id
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+    await Resume.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Resume deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});

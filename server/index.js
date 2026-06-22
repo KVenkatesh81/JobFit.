@@ -11,6 +11,7 @@ app.use(cors({
     if (
       origin.endsWith('.app.github.dev') ||
       origin.endsWith('.github.dev') ||
+      origin.endsWith('.vercel.app') ||
       origin === 'http://localhost:5173'
     ) return callback(null, true);
     callback(new Error('CORS not allowed: ' + origin));
